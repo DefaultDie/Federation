@@ -5,7 +5,7 @@ import csv
 import nextcord
 from nextcord.ext import application_checks, commands, tasks
 
-TOKEN = ''  # Your bot token here
+TOKEN = ''  # Your bot token here.
 
 
 def check_msg_content(m):
