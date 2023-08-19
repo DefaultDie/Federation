@@ -6,11 +6,15 @@ import numpy
 import nextcord
 from nextcord.ext import application_checks, tasks
 
-TOKEN = ''  # Your bot token here.
+TOKEN = ''  # Your token here.
 
 
 def check_msg_content(m):
-    return m.content in ('y', 'n') and not m.author.bot
+    return m.content in ('y', 'Y', 'n', 'N') and not m.author.bot
+
+
+def check_msg_content_x(m):
+    return m.content in ('y', 'Y', 'n', 'N', 'x', 'X') and not m.author.bot
 
 
 def predicate(m):
@@ -18,7 +22,6 @@ def predicate(m):
 
 
 def copy_master_list():
-
     members_list = []
     with open(f'{os.getcwd()}/Master/master_list.csv', 'r') as csvfile:
         reader = csv.reader(csvfile)
@@ -30,7 +33,6 @@ def copy_master_list():
 
 
 def get_server_roles(guild_id):
-
     server_roles = []
     with open(f'{os.getcwd()}/Workers/{guild_id}/{guild_id}.csv', 'r') as csvfile:
         reader = csv.reader(csvfile)
@@ -43,7 +45,6 @@ def get_server_roles(guild_id):
 
 
 def get_master_roles():
-
     master_roles = []
     with open(f'{os.getcwd()}/Master/master_roles.csv', 'r') as csvfile:
         reader = csv.reader(csvfile)
@@ -56,13 +57,15 @@ def get_master_roles():
 
 
 def get_log_channel(guild_id):
-
-    with open(f'{os.getcwd()}/Workers/{guild_id}/channel.csv', 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader)
-        for row in reader:
-            row = row[0][:-1]
-            return row
+    try:
+        with open(f'{os.getcwd()}/Workers/{guild_id}/channel.csv', 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader)
+            for row in reader:
+                row = row[0][:-1]
+                return row
+    except FileNotFoundError:
+        return 0
 
 
 def check_role(guild, member, verify_self=False):
@@ -164,7 +167,7 @@ def run_discord_bot():
 
         cwd = os.getcwd()
         worker_path = f'{cwd}/Workers/{member.guild.id}/Logs'
-        worker_log = f'{worker_path}/{member.guild.id}/logs_{datetime.date.today().strftime("%d_%m_%Y")}.txt'
+        worker_log = f'{worker_path}/logs_{datetime.date.today().strftime("%d_%m_%Y")}.txt'
         tz_est = datetime.datetime.now().strftime("%H:%M:%S")
 
         if not os.path.exists(worker_path):
@@ -301,7 +304,7 @@ def run_discord_bot():
 
                 check = await bot.wait_for('message', check=check_msg_content)
 
-                if check.content == 'n':
+                if check.content == 'n' or check.content == 'N':
                     time.sleep(1)
                     await interaction.send(embed=nextcord.Embed(title="Please input the correct role id:",
                                                                 color=0x000ff), delete_after=15)
@@ -316,7 +319,7 @@ def run_discord_bot():
 
                     input_roles[x] = interaction.guild.get_role(int(msg.content))
 
-                elif check.content == 'y':
+                elif check.content == 'y' or check.content == 'Y':
                     if guild.get_role(int(input_roles[x])) is None:
                         time.sleep(1)
                         await interaction.send(embed=nextcord.Embed(
@@ -349,9 +352,9 @@ def run_discord_bot():
                       f' Is this correct? (y/n). Enter X if you do not wish to use this feature. (x)',
                 color=0x000ff))
 
-            check = await bot.wait_for('message', check=check_msg_content)
+            check = await bot.wait_for('message', check=check_msg_content_x)
 
-            if check.content == 'n':
+            if check.content == 'n' or check.content == 'N':
                 time.sleep(1)
                 await interaction.send(embed=nextcord.Embed(title="Please input the correct channel id:",
                                                             color=0x000ff), delete_after=15)
@@ -366,7 +369,7 @@ def run_discord_bot():
 
                 channel = bot.get_channel(int(msg.content))
 
-            if check.content == 'y':
+            if check.content == 'y' or check.content == 'Y':
                 if channel is None:
                     time.sleep(1)
                     await interaction.send(embed=nextcord.Embed(
@@ -386,7 +389,7 @@ def run_discord_bot():
 
                 correct_channel = True
 
-            if check.content == 'x':
+            if check.content == 'x' or check.content == 'X':
                 correct_channel = True
 
         time.sleep(1)
@@ -419,11 +422,11 @@ def run_discord_bot():
             await interaction.send(embed=nextcord.Embed(
                 title=f'The channel you wish for me to output logs in is {channel.name}.'
                       f' Is this correct? (y/n). Enter X if you do not wish to use this feature. (x)',
-                color=0x000ff))
+                color=0x000ff), delete_after=15)
 
-            check = await bot.wait_for('message', check=check_msg_content)
+            check = await bot.wait_for('message', check=check_msg_content_x)
 
-            if check.content == 'n':
+            if check.content == 'n' or check.content == 'N':
                 time.sleep(1)
                 await interaction.send(embed=nextcord.Embed(title="Please input the correct channel id:",
                                                             color=0x000ff), delete_after=15)
@@ -438,7 +441,7 @@ def run_discord_bot():
 
                 channel = bot.get_channel(int(msg.content))
 
-            if check.content == 'y':
+            if check.content == 'y' or check.content == 'Y':
                 if channel is None:
                     time.sleep(1)
                     await interaction.send(embed=nextcord.Embed(
@@ -459,7 +462,7 @@ def run_discord_bot():
 
                 correct_channel = True
 
-            if check.content == 'x':
+            if check.content == 'x' or check.content == 'X':
                 correct_channel = True
 
         time.sleep(1)
@@ -595,11 +598,10 @@ def run_discord_bot():
             await channel.send(embed=nextcord.Embed(title=f'{interaction.user.name} completed a manual mass verify.\n',
                                                     color=0x000ff))
 
-    @tasks.loop(time=datetime.time(hour=9, minute=1))
+    @tasks.loop(time=datetime.time(hour=10, minute=1))
     async def auto_mass_verify():
 
         for guild in bot.guilds:
-
             cwd = os.getcwd()
             worker_path = f'{cwd}/Workers/{guild.id}/Logs'
             worker_log = f'{worker_path}/logs_{datetime.date.today().strftime("%d_%m_%Y")}.txt'
@@ -609,11 +611,11 @@ def run_discord_bot():
                 os.makedirs(worker_path)
 
             current_time = time.time()
-            for file in worker_path:
-                creation_time = os.path.getctime(file)
+            for file in os.listdir(worker_path):
+                creation_time = os.path.getctime(f'{worker_path}/{file}')
                 if (current_time - creation_time) // (24 * 3600) >= 31:
                     try:
-                        os.remove(file)
+                        os.remove(f'{worker_path}/{file}')
                     except FileNotFoundError:
                         print(f'Could not delete {file} during auto master list gen at {tz_est} eastern time.')
                         continue
@@ -625,15 +627,17 @@ def run_discord_bot():
             with open(worker_log, 'a') as log:
                 log.write(f'Auto mass verify began at {tz_est} eastern time.\n')
 
-            time.sleep(1)
-            await channel.send(embed=nextcord.Embed(title="Beginning today's auto verification process...",
-                                                    color=0x000ff))
+            if channel is not None:
+                time.sleep(1)
+                await channel.send(embed=nextcord.Embed(title="Beginning today's auto verification process...",
+                                                        color=0x000ff))
 
             count = 1
             member_count = len(guild.humans)
             for member in guild.humans:
-                await channel.last_message.edit(embed=nextcord.Embed(title=f'{count} / {member_count}% completed',
-                                                                     color=0x000ff))
+                if channel is not None:
+                    await channel.last_message.edit(embed=nextcord.Embed(title=f'{count} / {member_count}% completed',
+                                                                         color=0x000ff))
 
                 role = check_role(guild, member)
                 if role[0] != 0:
