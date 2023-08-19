@@ -5,11 +5,15 @@ import csv
 import nextcord
 from nextcord.ext import application_checks, commands, tasks
 
-TOKEN = ''  # Your bot token here.
+TOKEN = ''  # Your token here.
 
 
 def check_msg_content(m):
-    return m.content in ('y', 'n') and not m.author.bot
+    return m.content in ('y', 'Y', 'n', 'N') and not m.author.bot
+
+
+def check_msg_content_x(m):
+    return m.content in ('y', 'Y', 'n', 'N', 'x', 'X') and not m.author.bot
 
 
 def predicate(m):
@@ -43,12 +47,15 @@ def get_master_roles():
 
 def get_log_channel():
 
-    with open(f'{os.getcwd()}/Master/master_channel.csv', 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader)
-        for row in reader:
-            row = row[0][:-1]
-            return row
+    try:
+        with open(f'{os.getcwd()}/Master/master_channel.csv', 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader)
+            for row in reader:
+                row = row[0][:-1]
+                return row
+    except FileNotFoundError:
+        return 0
 
 
 def check_role(member):
@@ -116,7 +123,7 @@ def run_discord_bot():
             time.sleep(1)
             await interaction.send(embed=nextcord.Embed(title=f'{member.name} has been verified.', color=0x000ff))
 
-            with open(f'{master_path}/master_list.csv', 'a', newline='') as csvfile:
+            with open(f'{cwd}/Master/master_list.csv', 'a', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=field_names)
                 writer.writerow({'username': member.name, 'user_id': str(member.id) + '\t',
                                  'role': role, 'role_id': str(role.id) + '\t'})
@@ -178,7 +185,7 @@ def run_discord_bot():
 
                 check = await bot.wait_for('message', check=check_msg_content)
 
-                if check.content == 'n':
+                if check.content == 'n' or check.content == 'N':
                     time.sleep(1)
                     await interaction.send(embed=nextcord.Embed(
                         title="Please input the correct role id:", color=0x000ff), delete_after=15)
@@ -193,7 +200,7 @@ def run_discord_bot():
 
                     input_roles[x] = interaction.guild.get_role(int(msg.content))
 
-                elif check.content == 'y':
+                elif check.content == 'y' or check.content == 'Y':
                     if interaction.guild.get_role(int(input_roles[x])) is None:
                         time.sleep(1)
                         await interaction.send(embed=nextcord.Embed(
@@ -223,11 +230,11 @@ def run_discord_bot():
             await interaction.send(embed=nextcord.Embed(
                 title=f'The channel you wish for me to output logs in is {channel.name}.'
                       f' Is this correct? (y/n). Enter X if you do not wish to use this feature. (x)',
-                color=0x000ff))
+                color=0x000ff), delete_after=15)
 
-            check = await bot.wait_for('message', check=check_msg_content)
+            check = await bot.wait_for('message', check=check_msg_content_x)
 
-            if check.content == 'n':
+            if check.content == 'n' or check.content == 'N':
                 time.sleep(1)
                 await interaction.send(embed=nextcord.Embed(
                     title="Please input the correct channel id:", color=0x000ff), delete_after=15)
@@ -242,7 +249,7 @@ def run_discord_bot():
 
                 channel = bot.get_channel(int(msg.content))
 
-            if check.content == 'y':
+            if check.content == 'y' or check.content == 'Y':
                 if channel is None:
                     time.sleep(1)
                     await interaction.send(embed=nextcord.Embed(
@@ -261,7 +268,7 @@ def run_discord_bot():
 
                 correct_channel = True
 
-            if check.content == 'x':
+            if check.content == 'x' or check.content == 'X':
                 correct_channel = True
 
         time.sleep(1)
@@ -290,9 +297,9 @@ def run_discord_bot():
                       f' Is this correct? (y/n). Enter X if you do not wish to use this feature. (x)',
                 color=0x000ff))
 
-            check = await bot.wait_for('message', check=check_msg_content)
+            check = await bot.wait_for('message', check=check_msg_content_x)
 
-            if check.content == 'n':
+            if check.content == 'n' or check.content == 'N':
                 time.sleep(1)
                 await interaction.send(embed=nextcord.Embed(title="Please input the correct channel id:",
                                                             color=0x000ff), delete_after=15)
@@ -307,7 +314,7 @@ def run_discord_bot():
 
                 channel = bot.get_channel(int(msg.content))
 
-            if check.content == 'y':
+            if check.content == 'y' or check.content == 'Y':
                 time.sleep(1)
                 if channel is None:
                     time.sleep(1)
@@ -330,7 +337,7 @@ def run_discord_bot():
 
                 correct_channel = True
 
-            if check.content == 'x':
+            if check.content == 'x' or check.content == 'X':
                 correct_channel = True
 
         time.sleep(1)
@@ -405,11 +412,11 @@ def run_discord_bot():
             os.makedirs(master_path)
 
         current_time = time.time()
-        for file in master_path:
-            creation_time = os.path.getctime(file)
+        for file in os.listdir(master_path):
+            creation_time = os.path.getctime(f'{master_path}/{file}')
             if (current_time - creation_time) // (24 * 3600) >= 31:
                 try:
-                    os.remove(file)
+                    os.remove(f'{master_path}/{file}')
                 except FileNotFoundError:
                     print(f'Could not delete {file} during auto master list gen at {tz_est} eastern time.')
                     continue
@@ -430,9 +437,7 @@ def run_discord_bot():
         guild = bot.guilds[0]
         for member in guild.members:
             role = check_role(member)
-            if role == 0:
-                continue
-            else:
+            if role != 0:
                 with open(f'{cwd}/Master/master_list.csv', 'a', newline='') as csvfile:
                     writer = csv.DictWriter(csvfile, fieldnames=field_names)
                     writer.writerow({'username': member.name, 'user_id': str(member.id) + '\t',
